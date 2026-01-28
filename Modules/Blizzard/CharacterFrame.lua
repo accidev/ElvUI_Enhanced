@@ -152,6 +152,7 @@ local STAT_RESILIENCE = STAT_RESILIENCE
 -- GLOBALS: PetPaperDollFramePetFrame, PetPaperDollFrame_Update, PetPaperDollFrame_UpdateCompanionCooldowns, PetPaperDollFrame_UpdateTabs, PetResistanceFrame, PlayerTitleFrame
 -- GLOBALS: PlayerTitlePickerFrame, SetButtonPulse, SetCVar, StaticPopup_Hide, UIFrameFadeIn, UIFrameFadeOut, hooksecurefunc, table
 -- GLOBALS: EQUIPSET_EQUIP, SAVE
+local C_PlayerInfo = C_PlayerInfo
 
 local CHARACTERFRAME_EXPANDED_WIDTH = 197
 
@@ -922,10 +923,14 @@ function module:StrengthenStat(statFrame, unit, statIndex)
 		if statIndex == 6 then
 			statFrame.Value:SetFormattedText(value > 0 and "%.0f (+|cff00FF00%.1f|r)" or "%.0f (+|cff00FF00%.0f|r)", value, baseValue)
 		else
-			statFrame.Value:SetFormattedText("%d (+|cff00FF00%d|r)", value, baseValue)
+			if value == floor(value) and baseValue == floor(baseValue) then
+				statFrame.Value:SetFormattedText("%d (+|cff00FF00%d|r)", value, baseValue)
+			else
+				statFrame.Value:SetFormattedText("%.1f (+|cff00FF00%.1f|r)", value, baseValue)
+			end
 		end
 	else
-		statFrame.Value:SetText(0)
+		statFrame.Value:SetText("0")
 	end
 
 	local _, _, availableUps = C_PlayerInfo.GetBonusStatPointInfo()
@@ -1321,6 +1326,7 @@ local function StrengthenCategoryReset_OnEnter(self)
 	if cost and cost > 0 then
 		SetTooltipMoney(GameTooltip, cost)
 	end
+	GameTooltip:AddLine("Сбросить все очки усилений", 1, 0.82, 0)
 	GameTooltip:Show()
 end
 -- local function PaperDollFrame_QueuedUpdate(self)
@@ -2286,20 +2292,25 @@ function module:Initialize()
 			frame:Kill()
 		end
 	end
-	if GetRealmName():match("x4") then
+	local realmName = GetRealmName()
+	if realmName == "Sirus x5 - 3.3.5a+" or realmName:match("x4") or realmName:match("x5") or realmName:match("x2") then
 		PaperDollFrameStatsFrameLeftCategory:Kill()
 		PaperDollFrameStatsFrameRightCategory:Kill()
-		-- PaperDollFrameStatsFrameItemLevelCategory:Kill()
-		CharacterItemLevelFrame:ClearAllPoints()
-		CharacterItemLevelFrame:SetParent(CharacterModelFrame)
-		CharacterItemLevelFrame:SetPoint("CENTER",CharacterModelFrame,"CENTER",0,-100)
+		
+		if CharacterItemLevelFrame then
+			CharacterItemLevelFrame:ClearAllPoints()
+			CharacterItemLevelFrame:SetParent(CharacterModelFrame)
+			CharacterItemLevelFrame:SetPoint("CENTER",CharacterModelFrame,"CENTER",0,-100)
+		end
 		PaperDollFrameStatsFrameItemLevelCategory:Kill()
 
 		SCROLL_WIDTH_SIRUS_STATS = 90
 		SCROLL_WIDTH_SIRUS_STATS_CHILD = 190
 
-		table.remove(PAPERDOLL_STATCATEGORIES, 0)
-		table.remove(PAPERDOLL_STATCATEGORY_DEFAULTORDER, 0)
+		if PAPERDOLL_STATCATEGORIES[1] and PAPERDOLL_STATCATEGORIES[1].id ~= 1 then
+		end
+		if #PAPERDOLL_STATCATEGORIES > 0 then
+		end
 	else
 		SCROLL_WIDTH_SIRUS_STATS = 168
 		SCROLL_WIDTH_SIRUS_STATS_CHILD = 239
