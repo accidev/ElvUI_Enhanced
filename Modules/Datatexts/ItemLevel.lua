@@ -9,7 +9,7 @@ local join = string.join
 local GetInventoryItemLink = GetInventoryItemLink
 local GetInventorySlotInfo = GetInventorySlotInfo
 local GetItemQualityColor = GetItemQualityColor
-local GetItemInfo = GetItemInfo
+local GetItemInfo = C_Item.GetItemInfo
 
 local displayString = ""
 local lastPanel
