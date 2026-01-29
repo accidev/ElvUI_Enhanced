@@ -1355,6 +1355,7 @@ function module:PaperDollFrame_UpdateStatCategory(categoryFrame)
 			categoryFrame.ResetStatButton = CreateFrame("Button", nil, categoryFrame)
 			categoryFrame.ResetStatButton:Size(14)
 			categoryFrame.ResetStatButton:Point("TOPRIGHT", categoryFrame, "TOPRIGHT", -10, -5)
+			categoryFrame.ResetStatButton:SetFrameLevel(categoryFrame.Toolbar:GetFrameLevel() + 1)
 
 			categoryFrame.ResetStatButton.Icon = categoryFrame.ResetStatButton:CreateTexture(nil, "ARTWORK")
 			categoryFrame.ResetStatButton.Icon:SetAllPoints()
