@@ -2,6 +2,7 @@ local E, L, V, P, G = unpack(ElvUI)
 local EI = E:NewModule("Enhanced_EquipmentInfo", "AceHook-3.0", "AceEvent-3.0")
 -- local S = E:GetModule("Skins")
 local _G = _G
+local CreateFrame = CreateFrame
 local format = string.format
 local pairs = pairs
 
@@ -14,7 +15,8 @@ local pairs = pairs
 -- local utf8sub = string.utf8sub
 
 local GetInventoryItemDurability = GetInventoryItemDurability
--- local GetInventoryItemID = GetInventoryItemID
+local GetInventoryItemID = GetInventoryItemID
+local GetInventoryItemLink = GetInventoryItemLink
 local GetInventorySlotInfo = GetInventorySlotInfo
 local GetItemInfo = GetItemInfo
 local GetItemQualityColor = GetItemQualityColor
@@ -63,7 +65,7 @@ function EI:UpdatePaperDoll(unit)
 	end
 
 	local baseName = unit == "player" and "Character" or "Inspect"
-	local frame, slotID, itemLink
+	local frame, slotID, item
 	local _, rarity, itemLevel
 	local current, maximum, r, g, b
 
@@ -76,10 +78,14 @@ function EI:UpdatePaperDoll(unit)
 			frame.ItemLevel:SetText()
 
 			if E.db.enhanced.equipment.itemlevel.enable then
-				itemLink = GetInventoryItemLink(unit, slotID)
+				if unit == "player" then
+					item = GetInventoryItemID(unit, slotID)
+				else
+					item = GetInventoryItemLink(unit, slotID)
+				end
 
-				if itemLink then
-					_, _, rarity, itemLevel = GetItemInfo(itemLink)
+				if item then
+					_, _, rarity, itemLevel = GetItemInfo(item)
 
 					if itemLevel then
 						frame.ItemLevel:SetText(itemLevel)
@@ -165,12 +171,25 @@ local function InspectFrameUpdate()
 	EI:UpdatePaperDoll()
 end
 
+local CustomEventFrame = CreateFrame("Frame")
+CustomEventFrame:SetScript("OnEvent", function(_, event)
+	EI:OnEvent(event, "player")
+end)
+
+function EI:HookInspectUpdates()
+	if not self:IsHooked("InspectPaperDollFrame_UpdateButtons") then
+		self:SecureHook("InspectPaperDollFrame_UpdateButtons", InspectFrameUpdate)
+	end
+end
+
 function EI:OnEvent(event, unit)
-	if event == "UPDATE_INVENTORY_DURABILITY" then
+	if event == "UPDATE_INVENTORY_DURABILITY" or event == "PLAYER_EQUIPMENT_CHANGED" or event == "PLAYER_TRANSMOGRIFICATION_CHANGED" then
 		self:UpdatePaperDoll("player")
 
 	elseif event == "UNIT_INVENTORY_CHANGED" then
-		if unit ~= "player" and InspectFrame and unit == InspectFrame.unit then
+		if unit == "player" then
+			self:UpdatePaperDoll("player")
+		elseif InspectFrame and unit == InspectFrame.unit then
 			self:UpdatePaperDoll(unit)
 		end
 	elseif event == "PLAYER_REGEN_ENABLED" then
@@ -180,8 +199,7 @@ function EI:OnEvent(event, unit)
 		self.initializedInspect = true
 		self:UnregisterEvent("ADDON_LOADED")
 		self:BuildInfoText("Inspect")
-		self:HookScript(InspectFrame, "OnShow", InspectFrameUpdate)
-		self:SecureHook("InspectFrame_UnitChanged", InspectFrameUpdate)
+		self:HookInspectUpdates()
 	end
 end
 
@@ -192,6 +210,7 @@ function EI:InitialUpdatePaperDoll()
 	self:BuildInfoText("Character")
 
 	self.initialized = true
+	self:UpdatePaperDoll("player")
 end
 
 function EI:UpdateText()
@@ -230,13 +249,30 @@ function EI:ToggleState(init)
 
 		self:RegisterEvent("UPDATE_INVENTORY_DURABILITY", "OnEvent")
 		self:RegisterEvent("UNIT_INVENTORY_CHANGED", "OnEvent")
+		self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "OnEvent")
+
+		if not self.transmogEventRegistered then
+			CustomEventFrame:RegisterCustomEvent("PLAYER_TRANSMOGRIFICATION_CHANGED")
+			self.transmogEventRegistered = true
+		end
+
+		if self.initializedInspect then
+			self:HookInspectUpdates()
+		end
 
 		if not self.initializedInspect then
 			self:RegisterEvent("ADDON_LOADED", "OnEvent")
 		end
-	elseif self.initialized then
+	else
 		self:UnhookAll()
 		self:UnregisterAllEvents()
+
+		if self.transmogEventRegistered then
+			CustomEventFrame:UnregisterCustomEvent("PLAYER_TRANSMOGRIFICATION_CHANGED")
+			self.transmogEventRegistered = nil
+		end
+
+		if not self.initialized then return end
 
 		for slotName, durability in pairs(slots) do
 			_G["Character"..slotName].ItemLevel:SetText()
